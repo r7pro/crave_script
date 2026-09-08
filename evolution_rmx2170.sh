@@ -72,9 +72,17 @@ else
         git -C .repo/manifests remote get-url origin 2>/dev/null || true
     )
 
+    # Resolve upstream tracking branch instead of local 'default' HEAD ref
     CURRENT_MANIFEST_BRANCH=$( \
-        git -C .repo/manifests symbolic-ref --short HEAD 2>/dev/null || true
+        git -C .repo/manifests config branch.default.merge 2>/dev/null \
+        | sed 's#^refs/heads/##' || true
     )
+
+    if [ -z "$CURRENT_MANIFEST_BRANCH" ]; then
+        CURRENT_MANIFEST_BRANCH=$( \
+            git -C .repo/manifests symbolic-ref --short HEAD 2>/dev/null || true
+        )
+    fi
 
     NORMALIZED_CURRENT_REMOTE=$(normalize_git_url "$CURRENT_MANIFEST_REMOTE")
     NORMALIZED_EXPECTED_REMOTE=$(normalize_git_url "$ROM_MANIFEST_URL")
@@ -151,7 +159,7 @@ if [ -d ".repo/local_manifests/.git" ]; then
     )
 
     CURRENT_DEVICE_MANIFEST_BRANCH=$( \
-        git -C .repo/local_manifests symbolic-ref --short HEAD 2>/dev/null || true
+        git -C .repo/local_manifests rev-parse --abbrev-ref HEAD 2>/dev/null || true
     )
 
     NORMALIZED_CURRENT_DEVICE_URL=$( \
@@ -169,9 +177,10 @@ if [ -d ".repo/local_manifests/.git" ]; then
        [ "$CURRENT_DEVICE_MANIFEST_BRANCH" = "$DEVICE_MANIFEST_BRANCH" ]; then
 
         echo "Correct device manifest found."
-        echo "Pulling latest changes..."
+        echo "Updating to latest changes..."
 
-        git -C .repo/local_manifests pull --ff-only
+        git -C .repo/local_manifests fetch origin "$DEVICE_MANIFEST_BRANCH"
+        git -C .repo/local_manifests reset --hard "origin/$DEVICE_MANIFEST_BRANCH"
 
     else
 
