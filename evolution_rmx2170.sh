@@ -4,7 +4,8 @@
 # Evolution X - RMX2170 (Realme 7 Pro)
 # ============================================================
 #
-# Usage: crave -n run --no-patch -- "curl -sf https://raw.githubusercontent.com/r7pro/crave_script/aosp-16/evolution_rmx2170.sh | bash"
+# Usage:
+# crave -n run --no-patch -- "curl -sf https://raw.githubusercontent.com/r7pro/crave_script/aosp-16/evolution_rmx2170.sh | bash"
 #
 # ============================================================
 
@@ -43,169 +44,41 @@ fi
 echo "Working directory: $(pwd)"
 
 # ============================================================
-# Helper: Normalize Git URL
-# ============================================================
-
-normalize_git_url() {
-    echo "$1" \
-        | sed 's#\.git$##' \
-        | sed 's#/$##'
-}
-
-# ============================================================
-# Check existing repo
+# Initialize ROM repo
 # ============================================================
 
 echo "=============================="
-echo " Checking existing repo..."
+echo " Initializing $ROM_NAME ($ROM_MANIFEST_BRANCH)..."
 echo "=============================="
 
-NEED_REINIT=true
+repo init \
+    -u "$ROM_MANIFEST_URL" \
+    -b "$ROM_MANIFEST_BRANCH" \
+    --git-lfs \
+    --depth=1
 
-if [ ! -d ".repo" ]; then
-
-    echo "No repo found."
-
-else
-
-    CURRENT_MANIFEST_REMOTE=$( \
-        git -C .repo/manifests remote get-url origin 2>/dev/null || true
-    )
-
-    # Resolve upstream tracking branch instead of local 'default' HEAD ref
-    CURRENT_MANIFEST_BRANCH=$( \
-        git -C .repo/manifests config branch.default.merge 2>/dev/null \
-        | sed 's#^refs/heads/##' || true
-    )
-
-    if [ -z "$CURRENT_MANIFEST_BRANCH" ]; then
-        CURRENT_MANIFEST_BRANCH=$( \
-            git -C .repo/manifests symbolic-ref --short HEAD 2>/dev/null || true
-        )
-    fi
-
-    NORMALIZED_CURRENT_REMOTE=$(normalize_git_url "$CURRENT_MANIFEST_REMOTE")
-    NORMALIZED_EXPECTED_REMOTE=$(normalize_git_url "$ROM_MANIFEST_URL")
-
-    echo "Manifest remote : ${CURRENT_MANIFEST_REMOTE:-unknown}"
-    echo "Manifest branch : ${CURRENT_MANIFEST_BRANCH:-unknown}"
-
-    if [ "$NORMALIZED_CURRENT_REMOTE" != "$NORMALIZED_EXPECTED_REMOTE" ] || \
-       [ "$CURRENT_MANIFEST_BRANCH" != "$ROM_MANIFEST_BRANCH" ]; then
-
-        echo "=============================="
-        echo " Different ROM repo detected"
-        echo "=============================="
-
-        echo "Expected remote : $ROM_MANIFEST_URL"
-        echo "Expected branch : $ROM_MANIFEST_BRANCH"
-        echo "Found remote    : ${CURRENT_MANIFEST_REMOTE:-unknown}"
-        echo "Found branch    : ${CURRENT_MANIFEST_BRANCH:-unknown}"
-
-        echo
-        echo "Re-initializing repo for $ROM_NAME..."
-        echo "Existing .repo will NOT be deleted."
-
-        NEED_REINIT=true
-
-    else
-
-        echo "Correct ROM repo detected."
-        NEED_REINIT=false
-
-    fi
-fi
+echo "=============================="
+echo " Repo initialized"
+echo "=============================="
 
 # ============================================================
-# Initialize / Re-initialize ROM repo
-# ============================================================
-
-if [ "$NEED_REINIT" = true ]; then
-
-    echo "=============================="
-    echo " Initializing $ROM_NAME..."
-    echo "=============================="
-
-    repo init \
-        -u "$ROM_MANIFEST_URL" \
-        -b "$ROM_MANIFEST_BRANCH" \
-        --git-lfs \
-        --depth=1
-
-    echo "=============================="
-    echo " Repo initialized"
-    echo "=============================="
-
-else
-
-    echo "=============================="
-    echo " Existing repo is correct"
-    echo "=============================="
-
-fi
-
-# ============================================================
-# Check device local manifest
+# Setup device local manifest
 # ============================================================
 
 echo "=============================="
-echo " Checking device manifest..."
+echo " Setting up device manifest..."
 echo "=============================="
 
-if [ -d ".repo/local_manifests/.git" ]; then
+rm -rf .repo/local_manifests
 
-    CURRENT_DEVICE_MANIFEST_URL=$( \
-        git -C .repo/local_manifests remote get-url origin 2>/dev/null || true
-    )
+git clone \
+    -b "$DEVICE_MANIFEST_BRANCH" \
+    "$DEVICE_MANIFEST_URL" \
+    .repo/local_manifests
 
-    CURRENT_DEVICE_MANIFEST_BRANCH=$( \
-        git -C .repo/local_manifests rev-parse --abbrev-ref HEAD 2>/dev/null || true
-    )
-
-    NORMALIZED_CURRENT_DEVICE_URL=$( \
-        normalize_git_url "$CURRENT_DEVICE_MANIFEST_URL"
-    )
-
-    NORMALIZED_EXPECTED_DEVICE_URL=$( \
-        normalize_git_url "$DEVICE_MANIFEST_URL"
-    )
-
-    echo "Device manifest URL    : ${CURRENT_DEVICE_MANIFEST_URL:-unknown}"
-    echo "Device manifest branch : ${CURRENT_DEVICE_MANIFEST_BRANCH:-unknown}"
-
-    if [ "$NORMALIZED_CURRENT_DEVICE_URL" = "$NORMALIZED_EXPECTED_DEVICE_URL" ] && \
-       [ "$CURRENT_DEVICE_MANIFEST_BRANCH" = "$DEVICE_MANIFEST_BRANCH" ]; then
-
-        echo "Correct device manifest found."
-        echo "Updating to latest changes..."
-
-        git -C .repo/local_manifests fetch origin "$DEVICE_MANIFEST_BRANCH"
-        git -C .repo/local_manifests reset --hard "origin/$DEVICE_MANIFEST_BRANCH"
-
-    else
-
-        echo "Wrong device manifest detected."
-        echo "Replacing it..."
-
-        rm -rf .repo/local_manifests
-
-        git clone \
-            -b "$DEVICE_MANIFEST_BRANCH" \
-            "$DEVICE_MANIFEST_URL" \
-            .repo/local_manifests
-    fi
-
-else
-
-    echo "Device manifest not found."
-
-    rm -rf .repo/local_manifests
-
-    git clone \
-        -b "$DEVICE_MANIFEST_BRANCH" \
-        "$DEVICE_MANIFEST_URL" \
-        .repo/local_manifests
-fi
+echo "=============================="
+echo " Device manifest ready"
+echo "=============================="
 
 # ============================================================
 # Sync source
@@ -254,11 +127,11 @@ echo "=============================="
 # ============================================================
 
 echo "=============================="
-echo " Building $ROM_NAME..."
+echo " Building $ROM_NAME ($BUILD_TARGET)..."
 echo "=============================="
 
 m "$BUILD_TARGET"
 
 echo "=============================="
-echo " Build complete"
+echo " Build complete successfully"
 echo "=============================="
