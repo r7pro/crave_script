@@ -21,7 +21,7 @@ ROM_MANIFEST_URL="https://github.com/Evolution-X/manifest"
 ROM_MANIFEST_BRANCH="bka"
 
 DEVICE_MANIFEST_URL="https://github.com/r7pro/RMX2170-manifest"
-DEVICE_MANIFEST_BRANCH="evox-bka"
+DEVICE_MANIFEST_BRANCH="udfps_new"
 
 DEVICE="RMX2170"
 LUNCH_TARGET="lineage_RMX2170-user"
