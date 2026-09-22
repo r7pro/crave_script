@@ -24,8 +24,13 @@ DEVICE_MANIFEST_URL="https://github.com/r7pro/RMX2170-manifest"
 DEVICE_MANIFEST_BRANCH="udfps_new"
 
 DEVICE="RMX2170"
-LUNCH_TARGET="lineage_RMX2170-user"
+# Build variant: user, userdebug, or eng
+BUILD_VARIANT="userdebug"
 BUILD_TARGET="evolution"
+
+
+LUNCH_PRODUCT="lineage_${DEVICE}"
+LUNCH_TARGET="${LUNCH_PRODUCT}-${BUILD_VARIANT}"
 
 SOURCE_DIR="/tmp/src/android"
 
